@@ -86,6 +86,49 @@ impl CPU {
                         // Handle other register targets
                     }
                 }
+                Instruction::SUB(target) => {
+                    // SUB implementation
+                    match target {
+                        RegisterTarget::A => {
+                            let value = self.registers.a;
+                            let result = self.sub(value);
+                            self.registers.a = result;
+                        }
+                        RegisterTarget::B => {
+                            let value = self.registers.b;
+                            let result = self.sub(value);
+                            self.registers.a = result;
+                        }
+                        RegisterTarget::C => {
+                            let value = self.registers.c;
+                            let result = self.sub(value);
+                            self.registers.a = result;
+                        }
+                        RegisterTarget::D => {
+                            let value = self.registers.d;
+                            let result = self.sub(value);
+                            self.registers.a = result;
+                        }
+                        RegisterTarget::E => {
+                            let value = self.registers.e;
+                            let result = self.sub(value);
+                            self.registers.a = result;
+                        }
+                        RegisterTarget::H => {
+                            let value = self.registers.h;
+                            let result = self.sub(value);
+                            self.registers.a = result;
+                        }
+                        RegisterTarget::L => {
+                            let value = self.registers.l;
+                            let result = self.sub(value);
+                            self.registers.a = result;
+                        }
+                        _ => {
+                            // Handle other register targets
+                        }
+                    }
+                }   
             }
             _ => {
                 panic!("Unknown instruction: {:#X}", instruction);
@@ -101,6 +144,17 @@ impl CPU {
         self.registers.f.subtract = false;
         self.registers.f.half_carry = (self.registers.a & 0x0F) + (value & 0x0F) > 0x0F;
         self.registers.f.carry = did_overflow;
+        result
+    }
+
+    fn sub(&mut self, value: u8) -> u8 {
+        let (result, did_underflow) = self.registers.a.overflowing_sub(value);
+        self.registers.a = result;
+        // Update flags
+        self.registers.f.zero = result == 0;
+        self.registers.f.subtract = true;
+        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
+        self.registers.f.carry = did_underflow;
         result
     }
 }
