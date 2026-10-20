@@ -1,9 +1,13 @@
-use crate::registers::Registers;
+use crate::graphics::Graphics;
+use crate::registerqs::Registers;
+use crate::memorybus::MemoryBus;
 
 struct CPU {
     registers: Registers,
     pc: u16,              // Program Counter
-    memory: [u8; 0xFFFF], // 64KB of memory
+    sp: u16,
+    bus: MemoryBus,
+    is_halted: bool,
 }
 
 enum JumpCondition {
@@ -12,6 +16,20 @@ enum JumpCondition {
     NotZero,
     Carry,
     NotCarry,
+}
+
+enum LoadByteTarget {
+    A, B, C, D, E, H, L, HLI
+}
+enum LoadByteSource {
+    A, B, C, D, E, H, L, D8, HLI
+}
+enum LoadType {
+    Byte(LoadByteTarget, LoadByteSource),
+}
+
+enum StackTarget {
+    BC, DE, HL, AF
 }
 
 enum Instruction {
@@ -45,6 +63,12 @@ enum Instruction {
     SRA(RegisterTarget),
     SLA(RegisterTarget),
     SWAP(RegisterTarget),
+    LD(LoadType),
+    PUSH(StackTarget),
+    POP(StackTarget),
+    CALL(JumpCondition),
+    RET(JumpCondition),
+    HALT,
 }
 
 //TODO verify this, prefix will def have to be fixed
@@ -113,7 +137,7 @@ enum RegisterTarget {
 }
 
 impl CPU {
-    fn new() -> Self {
+    fn new(graphics: Graphics) -> Self {
         CPU {
             registers: Registers {
                 a: 0,
@@ -131,17 +155,22 @@ impl CPU {
                 l: 0,
             },
             pc: 0,
-            memory: [0; 0x10000],
+            sp: 0,
+            is_halted: false,
+            bus: MemoryBus::new(graphics),
         }
     }
     fn step(&mut self) {
-        let opcode = self.memory[self.pc as usize];
+        if self.is_halted {
+            return;
+        }
+        let opcode = self.bus.read_byte(self.pc);
         let prefix = opcode == 0xCB;
         if prefix {
-            opcode = self.memory[(self.pc + 1) as usize];
+            opcode = self.bus.read_byte(self.pc + 1);
         }
-        let next_pc = if let Some(instruction) = Instruction::from_byte(opcode) {
-            self.execute(instruction);
+        let next_pc = if let Some(instruction) = Instruction::from_byte(opcode, prefix) {
+            self.execute(instruction)
         } else {
             panic!("Unknown opcode: {:#X}", opcode);
         };
@@ -167,6 +196,118 @@ impl CPU {
                 };
                 self.jump(jump_condition)
             }
+            Instruction::CALL(condition) => {
+                let call_condition = match condition {
+                    JumpCondition::Always => true,
+                    JumpCondition::Zero => self.registers.f.zero,
+                    JumpCondition::NotZero => !self.registers.f.zero,
+                    JumpCondition::Carry => self.registers.f.carry,
+                    JumpCondition::NotCarry => !self.registers.f.carry,
+                };
+                if call_condition {
+                    let low = self.bus.read_byte(self.pc + 1) as u16;
+                    let high = self.bus.read_byte(self.pc + 2) as u16;
+                    let address = (high << 8) | low;
+                    // Push current PC + 3 onto the stack
+                    self.sp = self.sp.wrapping_sub(1);
+                    self.bus.write_byte(self.sp, ((self.pc + 3) >> 8) as u8); // High byte
+                    self.sp = self.sp.wrapping_sub(1);
+                    self.bus.write_byte(self.sp, ((self.pc + 3) & 0xFF) as u8); // Low byte
+                    address
+                } else {
+                    self.pc.wrapping_add(3)
+                }
+            }
+            Instruction::RET(condition) => {
+                let ret_condition = match condition {
+                    JumpCondition::Always => true,
+                    JumpCondition::Zero => self.registers.f.zero,
+                    JumpCondition::NotZero => !self.registers.f.zero,
+                    JumpCondition::Carry => self.registers.f.carry,
+                    JumpCondition::NotCarry => !self.registers.f.carry,
+                };
+                if ret_condition {
+                    // Pop the return address from the stack
+                    let low = self.bus.read_byte(self.sp);
+                    self.sp = self.sp.wrapping_add(1);
+                    let high = self.bus.read_byte(self.sp);
+                    self.sp = self.sp.wrapping_add(1);
+                    let return_address = (high << 8) | low;
+                    return_address
+                } else {
+                    self.pc.wrapping_add(1)
+                }
+            }  
+            Instruction::PUSH(target) => {
+                let value = match target {
+                    StackTarget::BC => self.registers.get_bc(),
+                    StackTarget::DE => self.registers.get_de(),
+                    StackTarget::HL => self.registers.get_hl(),
+                    StackTarget::AF => self.registers.get_af(),
+                };
+                self.sp = self.sp.wrapping_sub(1);
+                self.bus.write_byte(self.sp, (value >> 8) as u8);
+                self.sp = self.sp.wrapping_sub(1);
+                self.bus.write_byte(self.sp, (value & 0xFF) as u8);
+                self.pc.wrapping_add(1)
+            }
+            Instruction::POP(target) => {
+                let low = self.bus.read_byte(self.sp);
+                self.sp = self.sp.wrapping_add(1);
+                let high = self.bus.read_byte(self.sp);
+                self.sp = self.sp.wrapping_add(1);
+                let value = (high << 8) | low;
+                match target {
+                    StackTarget::BC => self.registers.set_bc(value),
+                    StackTarget::DE => self.registers.set_de(value),
+                    StackTarget::HL => self.registers.set_hl(value),
+                    StackTarget::AF => self.registers.set_af(value),
+                }
+                self.pc.wrapping_add(1)
+            }
+            Instruction::LD(load_type) => {
+                match load_type {
+                    LoadType::Byte(target, source) => {
+                        let value = match source {
+                            LoadByteSource::A => self.registers.a,
+                            LoadByteSource::B => self.registers.b,
+                            LoadByteSource::C => self.registers.c,
+                            LoadByteSource::D => self.registers.d,
+                            LoadByteSource::E => self.registers.e,
+                            LoadByteSource::H => self.registers.h,
+                            LoadByteSource::L => self.registers.l,
+                            LoadByteSource::D8 => {
+                                let immediate_value = self.bus.read_byte(self.pc + 1);
+                                immediate_value
+                            }
+                            LoadByteSource::HLI => {
+                                let address = self.registers.get_hl();
+                                self.bus.read_byte(address)
+                            }
+                        };
+                        match target {
+                            LoadByteTarget::A => self.registers.a = value,
+                            LoadByteTarget::B => self.registers.b = value,
+                            LoadByteTarget::C => self.registers.c = value,
+                            LoadByteTarget::D => self.registers.d = value,
+                            LoadByteTarget::E => self.registers.e = value,
+                            LoadByteTarget::H => self.registers.h = value,
+                            LoadByteTarget::L => self.registers.l = value,
+                            LoadByteTarget::HLI => {
+                                let address = self.registers.get_hl();
+                                self.bus.write_byte(address, value);
+                            }
+                        }
+                        if let LoadByteSource::D8 = source {
+                            // If the source was an immediate value, we need to increment PC by 2
+                            return self.pc.wrapping_add(2);
+                        } else {
+                            // Otherwise, increment PC by 1
+                            return self.pc.wrapping_add(1);
+                        }
+                    }
+                }
+            }   
             Instruction::ADD(target) => {
                 // ADD implementation
                 match target {
@@ -300,8 +441,8 @@ impl CPU {
 
     fn jump(&mut self, condition: bool) -> u16 {
         if condition {
-            let low = self.memory[(self.pc + 1) as usize] as u16;
-            let high = self.memory[(self.pc + 2) as usize] as u16;
+            let low = self.bus.read_byte(self.pc + 1) as u16;
+            let high = self.bus.read_byte(self.pc + 2) as u16;
             let address = (high << 8) | low;
             address
         } else {
