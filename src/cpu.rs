@@ -186,6 +186,63 @@ impl CPU {
                 // NOP
                 self.pc.wrapping_add(1)
             }
+            Instruction::HALT => {
+                self.is_halted = true;
+                self.pc.wrapping_add(1)
+            }
+            Instruction::ADC(target) => {
+                // ADC implementation
+                match target {
+                    RegisterTarget::A => {
+                        let value = self.registers.a;
+                        let result = self.add(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    _ => {
+                        // Handle other register targets
+                        self.pc
+                    }
+                }
+            }
+            Instruction::ADDHL(target) => {
+                match target {
+                    RegisterTarget::BC => {
+                        let value = self.registers.get_bc();
+                        let hl = self.registers.get_hl();
+                        let result = hl.wrapping_add(value);
+                        self.registers.set_hl(result);
+                        // Update flags
+                        self.registers.f.zero = false;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = (hl & 0x0FFF) + (value & 0x0FFF) > 0x0FFF;
+                        self.registers.f.carry = (hl as u32) + (value as u32) > 0xFFFF;
+                        self.pc.wrapping_add(1)
+                    }
+                    _ => {
+                        // Handle other register targets
+                        self.pc
+                    }
+                }
+            }
+            Instruction::AND(target) => {
+                match target {
+                    RegisterTarget::A => {
+                        let value = self.registers.a;
+                        self.registers.a &= value;
+                        // Update flags
+                        self.registers.f.zero = self.registers.a == 0;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = true;
+                        self.registers.f.carry = false;
+                        self.pc.wrapping_add(1)
+                    }
+                    _ => {
+                        // Handle other register targets
+                        self.pc
+                    }
+                }
+            }
             Instruction::JP(condition) => {
                 let jump_condition = match condition {
                     JumpCondition::Always => true,
