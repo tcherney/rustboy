@@ -55,6 +55,7 @@ enum Instruction {
     CPL,
     BIT(u8, RegisterTarget),
     SET(u8, RegisterTarget),
+    RES(u8, RegisterTarget),
     SRL(RegisterTarget),
     RR(RegisterTarget),
     RL(RegisterTarget),
@@ -82,29 +83,169 @@ impl Instruction {
     }
     fn from_byte_prefix(byte: u8) -> Option<Self> {
         match byte {
-            0x00 => Some(Instruction::NOP),
-            0x80 => Some(Instruction::ADD(RegisterTarget::B)),
-            0x81 => Some(Instruction::ADD(RegisterTarget::C)),
-            0x82 => Some(Instruction::ADD(RegisterTarget::D)),
-            0x83 => Some(Instruction::ADD(RegisterTarget::E)),
-            0x84 => Some(Instruction::ADD(RegisterTarget::H)),
-            0x85 => Some(Instruction::ADD(RegisterTarget::L)),
-            0x86 => Some(Instruction::ADD(RegisterTarget::A)), // ADD A, (HL)
-            0x87 => Some(Instruction::ADD(RegisterTarget::A)), // ADD A, A
-            0x90 => Some(Instruction::SUB(RegisterTarget::B)),
-            0x91 => Some(Instruction::SUB(RegisterTarget::C)),
-            0x92 => Some(Instruction::SUB(RegisterTarget::D)),
-            0x93 => Some(Instruction::SUB(RegisterTarget::E)),
-            0x94 => Some(Instruction::SUB(RegisterTarget::H)),
-            0x95 => Some(Instruction::SUB(RegisterTarget::L)),
-            0x96 => Some(Instruction::SUB(RegisterTarget::A)), // SUB (HL)
-            0x97 => Some(Instruction::SUB(RegisterTarget::A)), // SUB A
+            0x00 => Some(Instruction::RLC(RegisterTarget::B)),
+            0x01 => Some(Instruction::RLC(RegisterTarget::C)),
+            0x02 => Some(Instruction::RLC(RegisterTarget::D)),
+            0x03 => Some(Instruction::RLC(RegisterTarget::E)),
+            0x04 => Some(Instruction::RLC(RegisterTarget::H)),
+            0x05 => Some(Instruction::RLC(RegisterTarget::L)),
+            0x06 => Some(Instruction::RLC(RegisterTarget::A)), // RLC (HL)
+            0x07 => Some(Instruction::RLC(RegisterTarget::A)), // RLC A
+            0x08 => Some(Instruction::RR(RegisterTarget::B)),
+            0x09 => Some(Instruction::RR(RegisterTarget::C)),
+            0x0A => Some(Instruction::RR(RegisterTarget::D)),
+            0x0B => Some(Instruction::RR(RegisterTarget::E)),
+            0x0C => Some(Instruction::RR(RegisterTarget::H)),
+            0x0D => Some(Instruction::RR(RegisterTarget::L)),
+            0x0E => Some(Instruction::RR(RegisterTarget::A)), // RR (HL)
+            0x0F => Some(Instruction::RR(RegisterTarget::A)), // RR A
+            0x10 => Some(Instruction::RL(RegisterTarget::B)),
+            0x11 => Some(Instruction::RL(RegisterTarget::C)),
+            0x12 => Some(Instruction::RL(RegisterTarget::D)),
+            0x13 => Some(Instruction::RL(RegisterTarget::E)),
+            0x14 => Some(Instruction::RL(RegisterTarget::H)),
+            0x15 => Some(Instruction::RL(RegisterTarget::L)),
+            0x16 => Some(Instruction::RL(RegisterTarget::A)), // RL (HL)
+            0x17 => Some(Instruction::RL(RegisterTarget::A)), // RL A
+            0x18 => Some(Instruction::RRC(RegisterTarget::B)),
+            0x19 => Some(Instruction::RRC(RegisterTarget::C)),
+            0x1A => Some(Instruction::RRC(RegisterTarget::D)),
+            0x1B => Some(Instruction::RRC(RegisterTarget::E)),
+            0x1C => Some(Instruction::RRC(RegisterTarget::H)),
+            0x1D => Some(Instruction::RRC(RegisterTarget::L)),
+            0x1E => Some(Instruction::RRC(RegisterTarget::A)), // RRC (HL)
+            0x1F => Some(Instruction::RRC(RegisterTarget::A)), // RRC A
+            0x20 => Some(Instruction::SLA(RegisterTarget::B)),
+            0x21 => Some(Instruction::SLA(RegisterTarget::C)),
+            0x22 => Some(Instruction::SLA(RegisterTarget::D)),
+            0x23 => Some(Instruction::SLA(RegisterTarget::E)),
+            0x24 => Some(Instruction::SLA(RegisterTarget::H)),
+            0x25 => Some(Instruction::SLA(RegisterTarget::L)),
+            0x26 => Some(Instruction::SLA(RegisterTarget::A)), // SLA (HL)
+            0x27 => Some(Instruction::SLA(RegisterTarget::A)), // SLA A
+            0x28 => Some(Instruction::SRA(RegisterTarget::B)),
+            0x29 => Some(Instruction::SRA(RegisterTarget::C)),
+            0x2A => Some(Instruction::SRA(RegisterTarget::D)),
+            0x2B => Some(Instruction::SRA(RegisterTarget::E)),
+            0x2C => Some(Instruction::SRA(RegisterTarget::H)),
+            0x2D => Some(Instruction::SRA(RegisterTarget::L)),
+            0x2E => Some(Instruction::SRA(RegisterTarget::A)), // SRA (HL)
+            0x2F => Some(Instruction::SRA(RegisterTarget::A)), // SRA A
+            0x30 => Some(Instruction::SWAP(RegisterTarget::B)),
+            0x31 => Some(Instruction::SWAP(RegisterTarget::C)),
+            0x32 => Some(Instruction::SWAP(RegisterTarget::D)),
+            0x33 => Some(Instruction::SWAP(RegisterTarget::E)),
+            0x34 => Some(Instruction::SWAP(RegisterTarget::H)),
+            0x35 => Some(Instruction::SWAP(RegisterTarget::L)), 
+            0x36 => Some(Instruction::SWAP(RegisterTarget::A)), // SWAP (HL)
+            0x37 => Some(Instruction::SWAP(RegisterTarget::A)), // SWAP A
+            0x38 => Some(Instruction::SRL(RegisterTarget::B)),
+            0x39 => Some(Instruction::SRL(RegisterTarget::C)),
+            0x3A => Some(Instruction::SRL(RegisterTarget::D)),
+            0x3B => Some(Instruction::SRL(RegisterTarget::E)),
+            0x3C => Some(Instruction::SRL(RegisterTarget::H)),
+            0x3D => Some(Instruction::SRL(RegisterTarget::L)),
+            0x3E => Some(Instruction::SRL(RegisterTarget::A)), // SRL (HL)
+            0x3F => Some(Instruction::SRL(RegisterTarget::A)), // SRL A
+            0x40..=0x7F => {
+                let bit = (byte - 0x40) / 8;
+                let reg_code = (byte - 0x40) % 8;
+                let target = match reg_code {
+                    0 => RegisterTarget::B,
+                    1 => RegisterTarget::C,
+                    2 => RegisterTarget::D,
+                    3 => RegisterTarget::E,
+                    4 => RegisterTarget::H,
+                    5 => RegisterTarget::L,
+                    6 => RegisterTarget::A, // BIT (HL)
+                    7 => RegisterTarget::A, // BIT A
+                    _ => unreachable!(),
+                };
+                Some(Instruction::BIT(bit, target))
+            } 
+            0x80..=0xBF => {
+                let bit = (byte - 0x80) / 8;
+                let reg_code = (byte - 0x80) % 8;
+                let target = match reg_code {
+                    0 => RegisterTarget::B,
+                    1 => RegisterTarget::C,
+                    2 => RegisterTarget::D,
+                    3 => RegisterTarget::E,
+                    4 => RegisterTarget::H,
+                    5 => RegisterTarget::L,
+                    6 => RegisterTarget::A, // SET (HL)
+                    7 => RegisterTarget::A, // SET A
+                    _ => unreachable!(),
+                };
+                Some(Instruction::SET(bit, target))
+            }
+            0xC0..=0xFF => {
+                let bit = (byte - 0xC0) / 8;
+                let reg_code = (byte - 0xC0) % 8;
+                let target = match reg_code {
+                    0 => RegisterTarget::B,
+                    1 => RegisterTarget::C,
+                    2 => RegisterTarget::D,
+                    3 => RegisterTarget::E,
+                    4 => RegisterTarget::H,
+                    5 => RegisterTarget::L,
+                    6 => RegisterTarget::A, // RES (HL)
+                    7 => RegisterTarget::A, // RES A
+                    _ => unreachable!(),
+                };
+                Some(Instruction::RES(bit, target))
+            }
             _ => None,
         }
     }
     fn from_byte_not_prefix(byte: u8) -> Option<Self> {
         match byte {
             0x00 => Some(Instruction::NOP),
+            0x76 => Some(Instruction::HALT),
+            0xC3 => Some(Instruction::JP(JumpCondition::Always)),
+            0xC2 => Some(Instruction::JP(JumpCondition::NotZero)),
+            0xCA => Some(Instruction::JP(JumpCondition::Zero)),
+            0xD2 => Some(Instruction::JP(JumpCondition::NotCarry)),
+            0xDA => Some(Instruction::JP(JumpCondition::Carry)),
+            0xCD => Some(Instruction::CALL(JumpCondition::Always)),
+            0xC4 => Some(Instruction::CALL(JumpCondition::NotZero)),
+            0xCC => Some(Instruction::CALL(JumpCondition::Zero)),
+            0xD4 => Some(Instruction::CALL(JumpCondition::NotCarry)),
+            0xDC => Some(Instruction::CALL(JumpCondition::Carry)),
+            0xC9 => Some(Instruction::RET(JumpCondition::Always)),
+            0xC0 => Some(Instruction::RET(JumpCondition::NotZero)),
+            0xC8 => Some(Instruction::RET(JumpCondition::Zero)),
+            0xD0 => Some(Instruction::RET(JumpCondition::NotCarry)),
+            0xD8 => Some(Instruction::RET(JumpCondition::Carry)),
+            0xF5 => Some(Instruction::PUSH(StackTarget::AF)),
+            0xC5 => Some(Instruction::PUSH(StackTarget::BC)),
+            0xD5 => Some(Instruction::PUSH(StackTarget::DE)),
+            0xE5 => Some(Instruction::PUSH(StackTarget::HL)),
+            0xF1 => Some(Instruction::POP(StackTarget::AF)),
+            0xC1 => Some(Instruction::POP(StackTarget::BC)),
+            0xD1 => Some(Instruction::POP(StackTarget::DE)),
+            0xE1 => Some(Instruction::POP(StackTarget::HL)),
+            0x3E => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::D8))),
+            0x06 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::D8))),
+            0x0E => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::C, LoadByteSource::D8))),
+            0x16 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::D, LoadByteSource::D8))),
+            0x1E => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::E, LoadByteSource::D8))),
+            0x26 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::H, LoadByteSource::D8))),
+            0x2E => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::L, LoadByteSource::D8))),
+            0x78 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::B))),
+            0x79 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::C))),
+            0x7A => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::D))),
+            0x7B => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::E))),
+            0x7C => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::H))),
+            0x7D => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::L))),
+            0x7E => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLI))),
+            0x40 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::B))),
+            0x41 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::C))),
+            0x42 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::D))),
+            0x43 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::E))),
+            0x44 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::H))),
+            0x45 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::L))),
+            0x46 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::HLI))),  
             0x80 => Some(Instruction::ADD(RegisterTarget::B)),
             0x81 => Some(Instruction::ADD(RegisterTarget::C)),
             0x82 => Some(Instruction::ADD(RegisterTarget::D)),

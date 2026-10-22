@@ -31,6 +31,13 @@ impl Registers {
         self.h = ((value & 0xFF00) >> 8) as u8;
         self.l = (value & 0xFF) as u8;
     }
+    fn get_af(&self) -> u16 {
+        (self.a as u16) << 8 | u8::from(self.f) as u16
+    }
+    fn set_af(&mut self, value: u16) {
+        self.a = ((value & 0xFF00) >> 8) as u8;
+        self.f = FlagsRegister::from((value & 0xFF) as u8);
+    }
 }
 
 struct FlagsRegister {
