@@ -3,13 +3,15 @@
 //! first reference exhausted, have to go through the specifications
 //! and imlement the rest of the CPU instructions
 //! get raylib up and start testing instruction execution
+
+use raylib;
 mod cpu;
 mod graphics;
 mod memorybus;
-mod rustboy;
 mod registers;
+mod rustboy;
 use crate::rustboy::Rustboy;
 fn main() {
     let mut rustboy = Rustboy::new();
-    rustboy.run(); 
+    rustboy.run();
 }

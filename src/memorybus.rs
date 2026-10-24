@@ -1,52 +1,52 @@
-use crate::graphics::Graphics;
-use types::graphics;
+use std::{cell::RefCell, rc::Rc};
 
-struct MemoryBus {
+use crate::graphics::{self, Graphics};
+pub struct MemoryBus {
     memory: [u8; 0xFFFF], // 64KB of memory
-    graphics: Graphics,
+    graphics: Rc<RefCell<Graphics>>,
 }
 
 impl MemoryBus {
-    fn new(graphics: Graphics) -> Self {
+    pub fn new(graphics: Rc<RefCell<Graphics>>) -> Self {
         MemoryBus {
             memory: [0; 0xFFFF],
-            graphics: graphics,
+            graphics,
         }
     }
-    fn write_byte(&mut self, address: u16, value: u8) {
+    pub fn write_byte(&mut self, address: u16, value: u8) {
         if address >= graphics::VRAM_BEGIN as u16 && address < graphics::VRAM_END as u16 {
-            self.graphics.write_vram(address, value);
-        }
-        else {
-        self.memory[address as usize] = value;
+            self.graphics.borrow_mut().write_vram(address, value);
+        } else {
+            self.memory[address as usize] = value;
         }
     }
-    fn read_byte(&self, address: u16) -> u8 {
+    pub fn read_byte(&self, address: u16) -> u8 {
         if address >= graphics::VRAM_BEGIN as u16 && address < graphics::VRAM_END as u16 {
-            self.graphics.read_vram(address)
+            self.graphics.borrow().read_vram(address)
         } else {
             self.memory[address as usize]
         }
     }
-    fn write_word(&mut self, address: u16, value: u16) {
+    pub fn write_word(&mut self, address: u16, value: u16) {
         if address >= graphics::VRAM_BEGIN as u16 && address < graphics::VRAM_END as u16 {
-            self.graphics.write_vram(address, (value & 0xFF) as u8);
-            self.graphics.write_vram(address + 1, (value >> 8) as u8);
-        }
-        else {      
+            let mut graphics = self.graphics.borrow_mut();
+            graphics.write_vram(address, (value & 0xFF) as u8);
+            graphics.write_vram(address + 1, (value >> 8) as u8);
+        } else {
             self.memory[address as usize] = (value & 0xFF) as u8;
             self.memory[(address + 1) as usize] = (value >> 8) as u8;
         }
     }
-    fn read_word(&self, address: u16) -> u16 {
+    pub fn read_word(&self, address: u16) -> u16 {
         if address >= graphics::VRAM_BEGIN as u16 && address < graphics::VRAM_END as u16 {
-            let low = self.graphics.read_vram(address) as u16;
-            let high = self.graphics.read_vram(address + 1) as u16;
+            let graphics = self.graphics.borrow();
+            let low = graphics.read_vram(address) as u16;
+            let high = graphics.read_vram(address + 1) as u16;
             (high << 8) | low
         } else {
             let low = self.memory[address as usize] as u16;
             let high = self.memory[(address + 1) as usize] as u16;
             (high << 8) | low
-        } 
+        }
     }
 }

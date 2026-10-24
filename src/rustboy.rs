@@ -1,24 +1,27 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::cpu::CPU;
 use crate::graphics::Graphics;
 
-struct Rustboy {
+pub struct Rustboy {
     cpu: CPU,
-    graphics: Graphics,
+    graphics: Rc<RefCell<Graphics>>,
 }
 
 impl Rustboy {
-    fn new() -> Self {
+    pub fn new() -> Self {
+        let graphics = Rc::new(RefCell::new(Graphics::new()));
         Rustboy {
-            cpu: CPU::new(),
-            graphics: Graphics::new(),
+            cpu: CPU::new(graphics.clone()),
+            graphics,
         }
     }
 
-    fn run(&mut self) {
+    pub fn run(&mut self) {
         self.cpu.boot();
         loop {
             self.cpu.step();
-            self.graphics.update();
+            self.graphics.borrow_mut().update();
         }
     }
 }

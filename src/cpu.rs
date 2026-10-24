@@ -1,15 +1,18 @@
 use crate::graphics::Graphics;
-use crate::registerqs::Registers;
 use crate::memorybus::MemoryBus;
+use crate::registers::FlagsRegister;
+use crate::registers::Registers;
+use std::{cell::RefCell, rc::Rc};
 
-struct CPU {
+pub struct CPU {
     registers: Registers,
-    pc: u16,              // Program Counter
+    pc: u16, // Program Counter
     sp: u16,
     bus: MemoryBus,
     is_halted: bool,
 }
 
+#[derive(Debug)]
 enum JumpCondition {
     Always,
     Zero,
@@ -18,20 +21,44 @@ enum JumpCondition {
     NotCarry,
 }
 
+#[derive(Debug)]
 enum LoadByteTarget {
-    A, B, C, D, E, H, L, HLI
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    HLI,
 }
+#[derive(Debug)]
 enum LoadByteSource {
-    A, B, C, D, E, H, L, D8, HLI
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    D8,
+    HLI,
 }
+
+#[derive(Debug)]
 enum LoadType {
     Byte(LoadByteTarget, LoadByteSource),
 }
 
+#[derive(Debug)]
 enum StackTarget {
-    BC, DE, HL, AF
+    BC,
+    DE,
+    HL,
+    AF,
 }
 
+#[derive(Debug)]
 enum Instruction {
     NOP,
     ADD(RegisterTarget),
@@ -136,7 +163,7 @@ impl Instruction {
             0x32 => Some(Instruction::SWAP(RegisterTarget::D)),
             0x33 => Some(Instruction::SWAP(RegisterTarget::E)),
             0x34 => Some(Instruction::SWAP(RegisterTarget::H)),
-            0x35 => Some(Instruction::SWAP(RegisterTarget::L)), 
+            0x35 => Some(Instruction::SWAP(RegisterTarget::L)),
             0x36 => Some(Instruction::SWAP(RegisterTarget::A)), // SWAP (HL)
             0x37 => Some(Instruction::SWAP(RegisterTarget::A)), // SWAP A
             0x38 => Some(Instruction::SRL(RegisterTarget::B)),
@@ -162,7 +189,7 @@ impl Instruction {
                     _ => unreachable!(),
                 };
                 Some(Instruction::BIT(bit, target))
-            } 
+            }
             0x80..=0xBF => {
                 let bit = (byte - 0x80) / 8;
                 let reg_code = (byte - 0x80) % 8;
@@ -225,27 +252,90 @@ impl Instruction {
             0xC1 => Some(Instruction::POP(StackTarget::BC)),
             0xD1 => Some(Instruction::POP(StackTarget::DE)),
             0xE1 => Some(Instruction::POP(StackTarget::HL)),
-            0x3E => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::D8))),
-            0x06 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::D8))),
-            0x0E => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::C, LoadByteSource::D8))),
-            0x16 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::D, LoadByteSource::D8))),
-            0x1E => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::E, LoadByteSource::D8))),
-            0x26 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::H, LoadByteSource::D8))),
-            0x2E => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::L, LoadByteSource::D8))),
-            0x78 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::B))),
-            0x79 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::C))),
-            0x7A => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::D))),
-            0x7B => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::E))),
-            0x7C => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::H))),
-            0x7D => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::L))),
-            0x7E => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLI))),
-            0x40 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::B))),
-            0x41 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::C))),
-            0x42 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::D))),
-            0x43 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::E))),
-            0x44 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::H))),
-            0x45 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::L))),
-            0x46 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::HLI))),  
+            0x3E => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::A,
+                LoadByteSource::D8,
+            ))),
+            0x06 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::B,
+                LoadByteSource::D8,
+            ))),
+            0x0E => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::C,
+                LoadByteSource::D8,
+            ))),
+            0x16 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::D,
+                LoadByteSource::D8,
+            ))),
+            0x1E => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::E,
+                LoadByteSource::D8,
+            ))),
+            0x26 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::H,
+                LoadByteSource::D8,
+            ))),
+            0x2E => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::L,
+                LoadByteSource::D8,
+            ))),
+            0x78 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::A,
+                LoadByteSource::B,
+            ))),
+            0x79 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::A,
+                LoadByteSource::C,
+            ))),
+            0x7A => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::A,
+                LoadByteSource::D,
+            ))),
+            0x7B => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::A,
+                LoadByteSource::E,
+            ))),
+            0x7C => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::A,
+                LoadByteSource::H,
+            ))),
+            0x7D => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::A,
+                LoadByteSource::L,
+            ))),
+            0x7E => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::A,
+                LoadByteSource::HLI,
+            ))),
+            0x40 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::B,
+                LoadByteSource::B,
+            ))),
+            0x41 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::B,
+                LoadByteSource::C,
+            ))),
+            0x42 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::B,
+                LoadByteSource::D,
+            ))),
+            0x43 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::B,
+                LoadByteSource::E,
+            ))),
+            0x44 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::B,
+                LoadByteSource::H,
+            ))),
+            0x45 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::B,
+                LoadByteSource::L,
+            ))),
+            0x46 => Some(Instruction::LD(LoadType::Byte(
+                LoadByteTarget::B,
+                LoadByteSource::HLI,
+            ))),
             0x80 => Some(Instruction::ADD(RegisterTarget::B)),
             0x81 => Some(Instruction::ADD(RegisterTarget::C)),
             0x82 => Some(Instruction::ADD(RegisterTarget::D)),
@@ -267,6 +357,7 @@ impl Instruction {
     }
 }
 
+#[derive(Debug)]
 enum RegisterTarget {
     A,
     B,
@@ -275,10 +366,14 @@ enum RegisterTarget {
     E,
     H,
     L,
+    BC,
+    DE,
+    HL,
+    AF,
 }
 
 impl CPU {
-    fn new(graphics: Graphics) -> Self {
+    pub fn new(graphics: Rc<RefCell<Graphics>>) -> Self {
         CPU {
             registers: Registers {
                 a: 0,
@@ -301,11 +396,11 @@ impl CPU {
             bus: MemoryBus::new(graphics),
         }
     }
-    fn step(&mut self) {
+    pub fn step(&mut self) {
         if self.is_halted {
             return;
         }
-        let opcode = self.bus.read_byte(self.pc);
+        let mut opcode = self.bus.read_byte(self.pc);
         let prefix = opcode == 0xCB;
         if prefix {
             opcode = self.bus.read_byte(self.pc + 1);
@@ -317,7 +412,7 @@ impl CPU {
         };
         self.pc = next_pc;
     }
-    fn boot(&mut self) {
+    pub fn boot(&mut self) {
         // Boot sequence implementation
         // Initialize registers, memory, etc.
     }
@@ -426,16 +521,16 @@ impl CPU {
                 };
                 if ret_condition {
                     // Pop the return address from the stack
-                    let low = self.bus.read_byte(self.sp);
+                    let low: u16 = self.bus.read_byte(self.sp).into();
                     self.sp = self.sp.wrapping_add(1);
-                    let high = self.bus.read_byte(self.sp);
+                    let high: u16 = self.bus.read_byte(self.sp).into();
                     self.sp = self.sp.wrapping_add(1);
-                    let return_address = (high << 8) | low;
+                    let return_address: u16 = (high << 8) | low;
                     return_address
                 } else {
                     self.pc.wrapping_add(1)
                 }
-            }  
+            }
             Instruction::PUSH(target) => {
                 let value = match target {
                     StackTarget::BC => self.registers.get_bc(),
@@ -450,9 +545,9 @@ impl CPU {
                 self.pc.wrapping_add(1)
             }
             Instruction::POP(target) => {
-                let low = self.bus.read_byte(self.sp);
+                let low: u16 = self.bus.read_byte(self.sp).into();
                 self.sp = self.sp.wrapping_add(1);
-                let high = self.bus.read_byte(self.sp);
+                let high: u16 = self.bus.read_byte(self.sp).into();
                 self.sp = self.sp.wrapping_add(1);
                 let value = (high << 8) | low;
                 match target {
@@ -505,7 +600,7 @@ impl CPU {
                         }
                     }
                 }
-            }   
+            }
             Instruction::ADD(target) => {
                 // ADD implementation
                 match target {
@@ -609,8 +704,7 @@ impl CPU {
                 }
             }
             _ => {
-                panic!("Unknown instruction: {:#X}", instruction);
-                self.pc
+                panic!("Unknown instruction: {:#?}", instruction);
             }
         }
     }

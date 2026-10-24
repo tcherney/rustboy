@@ -1,10 +1,12 @@
+use crate::raylib::RaylibHandle;
+use crate::raylib::RaylibThread;
 use raylib::prelude::*;
 
-const VRAM_BEGIN: usize = 0x8000;
-const VRAM_END: usize = 0x9FFF;
-const VRAM_SIZE: usize = VRAM_END - VRAM_BEGIN + 1;
+pub(crate) const VRAM_BEGIN: usize = 0x8000;
+pub(crate) const VRAM_END: usize = 0x9FFF;
+pub(crate) const VRAM_SIZE: usize = VRAM_END - VRAM_BEGIN + 1;
 
-#[derive(Copy,Clone)]
+#[derive(Copy, Clone)]
 enum TilePixelValue {
     Zero,
     One,
@@ -25,10 +27,7 @@ pub struct Graphics {
 
 impl Graphics {
     pub fn new() -> Self {
-        let (mut window, thread) = raylib::init()
-            .size(160, 144)
-            .title("Rustboy")
-            .build();
+        let (mut window, thread) = raylib::init().size(160, 144).title("Rustboy").build();
         window.set_target_fps(60);
         Graphics {
             vram: [0; VRAM_SIZE],
@@ -52,7 +51,11 @@ impl Graphics {
                         TilePixelValue::Two => Color::DARKGRAY,
                         TilePixelValue::Three => Color::BLACK,
                     };
-                    d.draw_pixel(x as i32 + (tile_index % 16) as i32 * 8, y as i32 + (tile_index / 16) as i32 * 8, color);
+                    d.draw_pixel(
+                        x as i32 + (tile_index % 16) as i32 * 8,
+                        y as i32 + (tile_index / 16) as i32 * 8,
+                        color,
+                    );
                 }
             }
         }
@@ -67,7 +70,7 @@ impl Graphics {
             let normalized_index = index & 0xFFFE;
             let byte1 = self.vram[normalized_index];
             let byte2 = self.vram[normalized_index + 1];
-            let tile_index = index/16;
+            let tile_index = index / 16;
             let row_index = (index % 16) / 2;
             for pixel_index in 0..8 {
                 let bit1 = (byte1 >> (7 - pixel_index)) & 1;
