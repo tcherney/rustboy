@@ -371,6 +371,7 @@ enum RegisterTarget {
     HL,
     AF,
     SP,
+    D8,
 }
 
 impl CPU {
@@ -435,6 +436,56 @@ impl CPU {
                         let result = self.add(value);
                         self.registers.a = result;
                         self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::B => {
+                        let value = self.registers.b;
+                        let result = self.add(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::C => {
+                        let value = self.registers.c;
+                        let result = self.add(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::D => {
+                        let value = self.registers.d;
+                        let result = self.add(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::E => {
+                        let value = self.registers.e;
+                        let result = self.add(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::H => {
+                        let value = self.registers.h;
+                        let result = self.add(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::L => {
+                        let value = self.registers.l;
+                        let result = self.add(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::HL => {
+                        let address = self.registers.get_hl();
+                        let value = self.bus.read_byte(address);
+                        let result = self.add(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    //TODO may need to handle D8 differently, but for now just add them to the match
+                    RegisterTarget::D8 => {
+                        let immediate_value = self.bus.read_byte(self.pc + 1);
+                        let result = self.add(immediate_value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(2)
                     }
                     _ => {
                         // Handle other register targets
