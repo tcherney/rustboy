@@ -370,6 +370,7 @@ enum RegisterTarget {
     DE,
     HL,
     AF,
+    SP,
 }
 
 impl CPU {
@@ -455,9 +456,44 @@ impl CPU {
                         self.registers.f.carry = (hl as u32) + (value as u32) > 0xFFFF;
                         self.pc.wrapping_add(1)
                     }
+                    RegisterTarget::DE => {
+                        let value = self.registers.get_de();
+                        let hl = self.registers.get_hl();
+                        let result = hl.wrapping_add(value);
+                        self.registers.set_hl(result);
+                        // Update flags
+                        self.registers.f.zero = false;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = (hl & 0x0FFF) + (value & 0x0FFF) > 0x0FFF;
+                        self.registers.f.carry = (hl as u32) + (value as u32) > 0xFFFF;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::HL => {
+                        let value = self.registers.get_hl();
+                        let hl = self.registers.get_hl();
+                        let result = hl.wrapping_add(value);
+                        self.registers.set_hl(result);
+                        // Update flags
+                        self.registers.f.zero = false;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = (hl & 0x0FFF) + (value & 0x0FFF) > 0x0FFF;
+                        self.registers.f.carry = (hl as u32) + (value as u32) > 0xFFFF;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::SP => {
+                        let value = self.sp;
+                        let hl = self.registers.get_hl();
+                        let result = hl.wrapping_add(value);
+                        self.registers.set_hl(result);
+                        // Update flags
+                        self.registers.f.zero = false;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = (hl & 0x0FFF) + (value & 0x0FFF) > 0x0FFF;
+                        self.registers.f.carry = (hl as u32) + (value as u32) > 0xFFFF;
+                        self.pc.wrapping_add(1)
+                    }
                     _ => {
-                        // Handle other register targets
-                        self.pc
+                        panic!("Unknown target: {:#?}", target);
                     }
                 }
             }
