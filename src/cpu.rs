@@ -60,14 +60,14 @@ enum StackTarget {
 
 #[derive(Debug)]
 enum Instruction {
-    NOP,
-    ADD(RegisterTarget),
-    SUB(RegisterTarget),
-    JP(JumpCondition),
-    ADDHL(RegisterTarget),
-    ADC(RegisterTarget),
-    SBC(RegisterTarget),
-    AND(RegisterTarget),
+    NOP,                   //
+    ADD(RegisterTarget),   //
+    SUB(RegisterTarget),   //
+    JP(JumpCondition),     //
+    ADDHL(RegisterTarget), //
+    ADC(RegisterTarget),   //
+    SBC(RegisterTarget),   //
+    AND(RegisterTarget),   //
     OR(RegisterTarget),
     XOR(RegisterTarget),
     CP(RegisterTarget),
@@ -428,6 +428,62 @@ impl CPU {
                 self.is_halted = true;
                 self.pc.wrapping_add(1)
             }
+            Instruction::SBC(target) => {
+                match target {
+                    RegisterTarget::A => {
+                        let value = self.registers.a;
+                        let result = self.sub(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::B => {
+                        let value = self.registers.b;
+                        let result = self.sub(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::C => {
+                        let value = self.registers.c;
+                        let result = self.sub(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::D => {
+                        let value = self.registers.d;
+                        let result = self.sub(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::E => {
+                        let value = self.registers.e;
+                        let result = self.sub(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::H => {
+                        let value = self.registers.h;
+                        let result = self.sub(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::L => {
+                        let value = self.registers.l;
+                        let result = self.sub(value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::D8 => {
+                        let immediate_value = self.bus.read_byte(self.pc + 1);
+                        let result = self.sub(immediate_value);
+                        self.registers.a = result;
+                        self.pc.wrapping_add(2)
+                    }
+                    _ => {
+                        // Handle other register targets
+                        self.pc
+                    }
+                }
+            }
             Instruction::ADC(target) => {
                 // ADC implementation
                 match target {
@@ -638,6 +694,105 @@ impl CPU {
                         self.registers.f.zero = self.registers.a == 0;
                         self.registers.f.subtract = false;
                         self.registers.f.half_carry = true;
+                        self.registers.f.carry = false;
+                        self.pc.wrapping_add(1)
+                    }
+                    _ => {
+                        // Handle other register targets
+                        self.pc
+                    }
+                }
+            }
+            Instruction::OR(target) => {
+                match target {
+                    RegisterTarget::A => {
+                        let value = self.registers.a;
+                        self.registers.a |= value;
+                        // Update flags
+                        self.registers.f.zero = self.registers.a == 0;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = false;
+                        self.registers.f.carry = false;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::B => {
+                        let value = self.registers.b;
+                        self.registers.a |= value;
+                        // Update flags
+                        self.registers.f.zero = self.registers.a == 0;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = false;
+                        self.registers.f.carry = false;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::C => {
+                        let value = self.registers.c;
+                        self.registers.a |= value;
+                        // Update flags
+                        self.registers.f.zero = self.registers.a == 0;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = false;
+                        self.registers.f.carry = false;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::D => {
+                        let value = self.registers.d;
+                        self.registers.a |= value;
+                        // Update flags
+                        self.registers.f.zero = self.registers.a == 0;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = false;
+                        self.registers.f.carry = false;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::E => {
+                        let value = self.registers.e;
+                        self.registers.a |= value;
+                        // Update flags
+                        self.registers.f.zero = self.registers.a == 0;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = false;
+                        self.registers.f.carry = false;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::H => {
+                        let value = self.registers.h;
+                        self.registers.a |= value;
+                        // Update flags
+                        self.registers.f.zero = self.registers.a == 0;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = false;
+                        self.registers.f.carry = false;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::L => {
+                        let value = self.registers.l;
+                        self.registers.a |= value;
+                        // Update flags
+                        self.registers.f.zero = self.registers.a == 0;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = false;
+                        self.registers.f.carry = false;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::D8 => {
+                        let immediate_value = self.bus.read_byte(self.pc + 1);
+                        self.registers.a |= immediate_value;
+                        // Update flags
+                        self.registers.f.zero = self.registers.a == 0;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = false;
+                        self.registers.f.carry = false;
+                        self.pc.wrapping_add(2)
+                    }
+                    RegisterTarget::HL => {
+                        let address = self.registers.get_hl();
+                        let value = self.bus.read_byte(address);
+                        self.registers.a |= value;
+                        // Update flags
+                        self.registers.f.zero = self.registers.a == 0;
+                        self.registers.f.subtract = false;
+                        self.registers.f.half_carry = false;
                         self.registers.f.carry = false;
                         self.pc.wrapping_add(1)
                     }
