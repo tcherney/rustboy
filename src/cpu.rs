@@ -70,7 +70,7 @@ enum Instruction {
     AND(RegisterTarget),   //
     OR(RegisterTarget),    //
     XOR(RegisterTarget),   //
-    CP(RegisterTarget),
+    CP(RegisterTarget),    //
     INC(RegisterTarget),
     DEC(RegisterTarget),
     CCF,
@@ -893,6 +893,106 @@ impl CPU {
                         self.registers.f.subtract = false;
                         self.registers.f.half_carry = false;
                         self.registers.f.carry = false;
+                        self.pc.wrapping_add(1)
+                    }
+                    _ => {
+                        // Handle other register targets
+                        self.pc
+                    }
+                }
+            }
+            Instruction::CP(target) => {
+                match target {
+                    RegisterTarget::A => {
+                        let value = self.registers.a;
+                        let result = self.registers.a.wrapping_sub(value);
+                        // Update flags
+                        self.registers.f.zero = result == 0;
+                        self.registers.f.subtract = true;
+                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
+                        self.registers.f.carry = self.registers.a < value;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::B => {
+                        let value = self.registers.b;
+                        let result = self.registers.a.wrapping_sub(value);
+                        // Update flags
+                        self.registers.f.zero = result == 0;
+                        self.registers.f.subtract = true;
+                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
+                        self.registers.f.carry = self.registers.a < value;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::C => {
+                        let value = self.registers.c;
+                        let result = self.registers.a.wrapping_sub(value);
+                        // Update flags
+                        self.registers.f.zero = result == 0;
+                        self.registers.f.subtract = true;
+                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
+                        self.registers.f.carry = self.registers.a < value;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::D => {
+                        let value = self.registers.d;
+                        let result = self.registers.a.wrapping_sub(value);
+                        // Update flags
+                        self.registers.f.zero = result == 0;
+                        self.registers.f.subtract = true;
+                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
+                        self.registers.f.carry = self.registers.a < value;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::E => {
+                        let value = self.registers.e;
+                        let result = self.registers.a.wrapping_sub(value);
+                        // Update flags
+                        self.registers.f.zero = result == 0;
+                        self.registers.f.subtract = true;
+                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
+                        self.registers.f.carry = self.registers.a < value;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::H => {
+                        let value = self.registers.h;
+                        let result = self.registers.a.wrapping_sub(value);
+                        // Update flags
+                        self.registers.f.zero = result == 0;
+                        self.registers.f.subtract = true;
+                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
+                        self.registers.f.carry = self.registers.a < value;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::L => {
+                        let value = self.registers.l;
+                        let result = self.registers.a.wrapping_sub(value);
+                        // Update flags
+                        self.registers.f.zero = result == 0;
+                        self.registers.f.subtract = true;
+                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
+                        self.registers.f.carry = self.registers.a < value;
+                        self.pc.wrapping_add(1)
+                    }
+                    RegisterTarget::D8 => {
+                        let immediate_value = self.bus.read_byte(self.pc + 1);
+                        let result = self.registers.a.wrapping_sub(immediate_value);
+                        // Update flags
+                        self.registers.f.zero = result == 0;
+                        self.registers.f.subtract = true;
+                        self.registers.f.half_carry =
+                            (self.registers.a & 0x0F) < (immediate_value & 0x0F);
+                        self.registers.f.carry = self.registers.a < immediate_value;
+                        self.pc.wrapping_add(2)
+                    }
+                    RegisterTarget::HL => {
+                        let address = self.registers.get_hl();
+                        let value = self.bus.read_byte(address);
+                        let result = self.registers.a.wrapping_sub(value);
+                        // Update flags
+                        self.registers.f.zero = result == 0;
+                        self.registers.f.subtract = true;
+                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
+                        self.registers.f.carry = self.registers.a < value;
                         self.pc.wrapping_add(1)
                     }
                     _ => {
