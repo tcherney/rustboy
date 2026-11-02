@@ -550,6 +550,7 @@ impl CPU {
                 }
             }
             Instruction::ADDHL(target) => {
+                //TODO may have to fix flag update for u16
                 match target {
                     RegisterTarget::BC => {
                         let value = self.registers.get_bc();
@@ -557,10 +558,7 @@ impl CPU {
                         let result = hl.wrapping_add(value);
                         self.registers.set_hl(result);
                         // Update flags
-                        self.registers.f.zero = false;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = (hl & 0x0FFF) + (value & 0x0FFF) > 0x0FFF;
-                        self.registers.f.carry = (hl as u32) + (value as u32) > 0xFFFF;
+                        self.update_flags(result as u8, false, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::DE => {
@@ -569,10 +567,7 @@ impl CPU {
                         let result = hl.wrapping_add(value);
                         self.registers.set_hl(result);
                         // Update flags
-                        self.registers.f.zero = false;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = (hl & 0x0FFF) + (value & 0x0FFF) > 0x0FFF;
-                        self.registers.f.carry = (hl as u32) + (value as u32) > 0xFFFF;
+                        self.update_flags(result as u8, false, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::HL => {
@@ -581,10 +576,7 @@ impl CPU {
                         let result = hl.wrapping_add(value);
                         self.registers.set_hl(result);
                         // Update flags
-                        self.registers.f.zero = false;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = (hl & 0x0FFF) + (value & 0x0FFF) > 0x0FFF;
-                        self.registers.f.carry = (hl as u32) + (value as u32) > 0xFFFF;
+                        self.update_flags(result as u8, false, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::SP => {
@@ -593,10 +585,7 @@ impl CPU {
                         let result = hl.wrapping_add(value);
                         self.registers.set_hl(result);
                         // Update flags
-                        self.registers.f.zero = false;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = (hl & 0x0FFF) + (value & 0x0FFF) > 0x0FFF;
-                        self.registers.f.carry = (hl as u32) + (value as u32) > 0xFFFF;
+                        self.update_flags(result as u8, false, true);
                         self.pc.wrapping_add(1)
                     }
                     _ => {
@@ -610,80 +599,56 @@ impl CPU {
                         let value = self.registers.a;
                         self.registers.a &= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = true;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::B => {
                         let value = self.registers.b;
                         self.registers.a &= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = true;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::C => {
                         let value = self.registers.c;
                         self.registers.a &= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = true;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::D => {
                         let value = self.registers.d;
                         self.registers.a &= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = true;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::E => {
                         let value = self.registers.e;
                         self.registers.a &= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = true;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::H => {
                         let value = self.registers.h;
                         self.registers.a &= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = true;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::L => {
                         let value = self.registers.l;
                         self.registers.a &= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = true;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::D8 => {
                         let immediate_value = self.bus.read_byte(self.pc + 1);
                         self.registers.a &= immediate_value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = true;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, true);
                         self.pc.wrapping_add(2)
                     }
                     RegisterTarget::HL => {
@@ -691,10 +656,7 @@ impl CPU {
                         let value = self.bus.read_byte(address);
                         self.registers.a &= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = true;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, true);
                         self.pc.wrapping_add(1)
                     }
                     _ => {
@@ -709,80 +671,56 @@ impl CPU {
                         let value = self.registers.a;
                         self.registers.a |= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::B => {
                         let value = self.registers.b;
                         self.registers.a |= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::C => {
                         let value = self.registers.c;
                         self.registers.a |= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::D => {
                         let value = self.registers.d;
                         self.registers.a |= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::E => {
                         let value = self.registers.e;
                         self.registers.a |= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::H => {
                         let value = self.registers.h;
                         self.registers.a |= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::L => {
                         let value = self.registers.l;
                         self.registers.a |= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::D8 => {
                         let immediate_value = self.bus.read_byte(self.pc + 1);
                         self.registers.a |= immediate_value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(2)
                     }
                     RegisterTarget::HL => {
@@ -790,10 +728,7 @@ impl CPU {
                         let value = self.bus.read_byte(address);
                         self.registers.a |= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     _ => {
@@ -808,80 +743,56 @@ impl CPU {
                         let value = self.registers.a;
                         self.registers.a ^= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::B => {
                         let value = self.registers.b;
                         self.registers.a ^= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::C => {
                         let value = self.registers.c;
                         self.registers.a ^= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::D => {
                         let value = self.registers.d;
                         self.registers.a ^= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::E => {
                         let value = self.registers.e;
                         self.registers.a ^= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::H => {
                         let value = self.registers.h;
                         self.registers.a ^= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::L => {
                         let value = self.registers.l;
                         self.registers.a ^= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::D8 => {
                         let immediate_value = self.bus.read_byte(self.pc + 1);
                         self.registers.a ^= immediate_value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(2)
                     }
                     RegisterTarget::HL => {
@@ -889,10 +800,7 @@ impl CPU {
                         let value = self.bus.read_byte(address);
                         self.registers.a ^= value;
                         // Update flags
-                        self.registers.f.zero = self.registers.a == 0;
-                        self.registers.f.subtract = false;
-                        self.registers.f.half_carry = false;
-                        self.registers.f.carry = false;
+                        self.update_flags(self.registers.a, false, false);
                         self.pc.wrapping_add(1)
                     }
                     _ => {
@@ -907,81 +815,49 @@ impl CPU {
                         let value = self.registers.a;
                         let result = self.registers.a.wrapping_sub(value);
                         // Update flags
-                        self.registers.f.zero = result == 0;
-                        self.registers.f.subtract = true;
-                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
-                        self.registers.f.carry = self.registers.a < value;
-                        self.pc.wrapping_add(1)
-                    }
-                    RegisterTarget::B => {
-                        let value = self.registers.b;
-                        let result = self.registers.a.wrapping_sub(value);
-                        // Update flags
-                        self.registers.f.zero = result == 0;
-                        self.registers.f.subtract = true;
-                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
-                        self.registers.f.carry = self.registers.a < value;
+                        self.update_flags(result, self.registers.a < value, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::C => {
                         let value = self.registers.c;
                         let result = self.registers.a.wrapping_sub(value);
                         // Update flags
-                        self.registers.f.zero = result == 0;
-                        self.registers.f.subtract = true;
-                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
-                        self.registers.f.carry = self.registers.a < value;
+                        self.update_flags(result, self.registers.a < value, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::D => {
                         let value = self.registers.d;
                         let result = self.registers.a.wrapping_sub(value);
                         // Update flags
-                        self.registers.f.zero = result == 0;
-                        self.registers.f.subtract = true;
-                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
-                        self.registers.f.carry = self.registers.a < value;
+                        self.update_flags(result, self.registers.a < value, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::E => {
                         let value = self.registers.e;
                         let result = self.registers.a.wrapping_sub(value);
                         // Update flags
-                        self.registers.f.zero = result == 0;
-                        self.registers.f.subtract = true;
-                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
-                        self.registers.f.carry = self.registers.a < value;
+                        self.update_flags(result, self.registers.a < value, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::H => {
                         let value = self.registers.h;
                         let result = self.registers.a.wrapping_sub(value);
                         // Update flags
-                        self.registers.f.zero = result == 0;
-                        self.registers.f.subtract = true;
-                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
-                        self.registers.f.carry = self.registers.a < value;
+                        self.update_flags(result, self.registers.a < value, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::L => {
                         let value = self.registers.l;
                         let result = self.registers.a.wrapping_sub(value);
                         // Update flags
-                        self.registers.f.zero = result == 0;
-                        self.registers.f.subtract = true;
-                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
-                        self.registers.f.carry = self.registers.a < value;
+                        self.update_flags(result, self.registers.a < value, true);
                         self.pc.wrapping_add(1)
                     }
                     RegisterTarget::D8 => {
                         let immediate_value = self.bus.read_byte(self.pc + 1);
                         let result = self.registers.a.wrapping_sub(immediate_value);
                         // Update flags
-                        self.registers.f.zero = result == 0;
-                        self.registers.f.subtract = true;
-                        self.registers.f.half_carry =
-                            (self.registers.a & 0x0F) < (immediate_value & 0x0F);
-                        self.registers.f.carry = self.registers.a < immediate_value;
+                        self.update_flags(result, self.registers.a < immediate_value, true);
                         self.pc.wrapping_add(2)
                     }
                     RegisterTarget::HL => {
@@ -989,10 +865,7 @@ impl CPU {
                         let value = self.bus.read_byte(address);
                         let result = self.registers.a.wrapping_sub(value);
                         // Update flags
-                        self.registers.f.zero = result == 0;
-                        self.registers.f.subtract = true;
-                        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
-                        self.registers.f.carry = self.registers.a < value;
+                        self.update_flags(result, self.registers.a < value, true);
                         self.pc.wrapping_add(1)
                     }
                     _ => {
@@ -1231,14 +1104,17 @@ impl CPU {
         }
     }
 
+    fn update_flags(&mut self, result: u8, did_overflow: bool, is_subtraction: bool) {
+        self.registers.f.zero = result == 0;
+        self.registers.f.subtract = is_subtraction;
+        self.registers.f.half_carry = (self.registers.a & 0x0F) + (result & 0x0F) > 0x0F;
+        self.registers.f.carry = did_overflow;
+    }
     fn add(&mut self, value: u8) -> u8 {
         let (result, did_overflow) = self.registers.a.overflowing_add(value);
         self.registers.a = result;
         // Update flags
-        self.registers.f.zero = result == 0;
-        self.registers.f.subtract = false;
-        self.registers.f.half_carry = (self.registers.a & 0x0F) + (value & 0x0F) > 0x0F;
-        self.registers.f.carry = did_overflow;
+        self.update_flags(result, did_overflow, false);
         result
     }
 
@@ -1246,10 +1122,7 @@ impl CPU {
         let (result, did_underflow) = self.registers.a.overflowing_sub(value);
         self.registers.a = result;
         // Update flags
-        self.registers.f.zero = result == 0;
-        self.registers.f.subtract = true;
-        self.registers.f.half_carry = (self.registers.a & 0x0F) < (value & 0x0F);
-        self.registers.f.carry = did_underflow;
+        self.update_flags(result, did_underflow, true);
         result
     }
 
